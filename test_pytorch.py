@@ -1,7 +1,7 @@
 import os, sys
 import gi
 gi.require_version('Gst', '1.0')
-from gi.repository import Gst,GObject
+from gi.repository import Gst, GObject
 import numpy as np
 import torch
 from PIL import Image
@@ -19,18 +19,16 @@ Gst.init(None)
 
 pipeline = Gst.Pipeline.new('new-pipeline')
 
-appsrc = Gst.ElementFactory.make('appsrc', 'source')
-filesrc = Gst.ElementFactory.make('filesrc', 'file-source')
-filesrc.set_property('location', '/home/hungtrieu07/gstreamer/video/test.mp4')
-filesrc.set_property('num-buffers', 200)
+src = Gst.ElementFactory.make('filesrc', 'source')
+src.set_property('location', './video/test.mp4')
+src.set_property('num-buffers', 200)
 decodebin = Gst.ElementFactory.make('decodebin', 'decoder')
 videoconvert = Gst.ElementFactory.make('videoconvert', 'converter')
 autovideosink = Gst.ElementFactory.make('autovideosink', 's')
 
 s = pipeline.get_by_name('s')
 
-pipeline.add(appsrc)
-pipeline.add(filesrc)
+pipeline.add(src)
 pipeline.add(decodebin)
 pipeline.add(videoconvert)
 pipeline.add(autovideosink)
@@ -41,8 +39,8 @@ def on_pad_added(element, pad):
     sinkpad = autovideosink.get_static_pad('sink')
     videoconvert.link(autovideosink)
     
-appsrc.link(decodebin)
-decodebin.link(autovideosink)
+src.link(decodebin)
+decodebin.connect('pad-added', on_pad_added)
 
 detector = torch.hub.load('ultralytics/yolov5', 'custom', 'yolov5s.pt').eval().to(torch.device('cpu'))
 
@@ -64,7 +62,7 @@ def on_frame_probe(pad, info):
     new_data = img_np.tobytes()
     new_buf = Gst.Buffer.new_wrapped(new_data)
     sample_new = Gst.Sample.new(new_buf, pad.get_current_caps())
-    appsrc.emit('push-sample', sample_new)
+    s.emit('push-sample', sample_new)
         
     return Gst.PadProbeReturn.OK
 
@@ -85,8 +83,6 @@ def buffer_to_image_tensor(buf, caps):
             return Image.fromarray(image_array[:,:,:3]) # RGBA -> RGB
         finally:
             buf.unmap(map_info)
-            
-decodebin.connect('pad-added', on_frame_probe)
 
 pipeline.get_by_name('s').get_static_pad('sink').add_probe(
     Gst.PadProbeType.BUFFER,
