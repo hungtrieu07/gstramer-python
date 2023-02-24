@@ -37,7 +37,9 @@ def on_pad_added(element, pad):
 src.link(decodebin)
 decodebin.connect('pad-added', on_pad_added)
 
-detector = torch.hub.load('ultralytics/yolov5', 'custom', 'yolov5s.pt').eval().to(torch.device('cpu'))
+device = torch.device("cpu")
+print(device)
+detector = torch.hub.load('ultralytics/yolov5', 'custom', 'yolov5s.pt').eval().to(device)
 
 def on_frame_probe(pad, info):
     buf = info.get_buffer()
@@ -51,8 +53,6 @@ def on_frame_probe(pad, info):
         for i in range(len(objects)):
             x_min, y_min, x_max, y_max = int(objects[i][0]), int(objects[i][1]), int(objects[i][2]), int(objects[i][3])
             cv2.rectangle(img_np, (x_min, y_min), (x_max, y_max), (255,0,0), 2)
-            # new_data = img_np.tobytes()
-            # new_buf = Gst.Buffer.new_wrapped(new_data)
         # Save the first frame as an image
         Image.fromarray(img_np[:,:,:3]).save("output.jpg")
         # Remove the probe from the pad to stop processing any more frames
@@ -62,7 +62,6 @@ def on_frame_probe(pad, info):
 
 def buffer_to_image_tensor(buf, caps):
     caps_structure = caps.get_structure(0)
-    # print(caps_structure.to_string())
     height, width = caps_structure.get_value('height'), caps_structure.get_value('width')
     channels = 3
     is_mapped, map_info = buf.map(Gst.MapFlags.READ)
