@@ -11,7 +11,7 @@ import time
 Gst.init(None)
 
 src = Gst.ElementFactory.make('filesrc', 'source')
-src.set_property('location', '/path/tp/video.mp4')  # path to video file
+src.set_property('location', 'video/test.mp4')  # path to video file
 src.set_property('num-buffers', 9000)
 decodebin = Gst.ElementFactory.make('decodebin', 'decoder')
 videoconvert = Gst.ElementFactory.make('videoconvert', 'converter')
